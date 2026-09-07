@@ -98,6 +98,11 @@
     font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;
   }
   .save-pill:hover{opacity:0.9;}
+  .add-product-btn{
+    background:var(--accent);color:#1a1510;border:none;padding:11px 22px;border-radius:8px;
+    font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  .add-product-btn:hover{opacity:0.9;}
 
   /* filters */
   .filters{
@@ -165,6 +170,11 @@
     color:var(--text-3);cursor:pointer;min-height:220px;font-size:14px;background:transparent;font-family:'Inter',sans-serif;
   }
   .add-product-card:hover{border-color:var(--accent);color:var(--accent);}
+  .unsaved-flag{
+    font-size:10.5px;color:var(--danger);background:rgba(193,88,74,0.12);
+    border:1px solid rgba(193,88,74,0.4);border-radius:5px;padding:3px 8px;
+    display:inline-block;width:fit-content;letter-spacing:0.3px;
+  }
 
   /* cart drawer */
   .overlay{
@@ -215,6 +225,31 @@
   .confirm-btn{background:var(--accent);border:none;color:#1a1510;font-weight:600;}
   .success-note{color:var(--ok);font-size:13px;text-align:center;padding:10px 0;display:none;}
   .error-note{color:var(--danger);font-size:12px;margin-top:-8px;margin-bottom:12px;display:none;}
+  .wallet-details{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:14px 16px;margin-bottom:14px;
+  }
+  .wallet-card-title{
+    font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--accent);margin-bottom:10px;
+  }
+  .wallet-row{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:7px 0;border-bottom:1px dashed var(--border);font-size:13px;
+  }
+  .wallet-row:last-of-type{border-bottom:none;}
+  .wallet-row span{color:var(--text-3);}
+  .wallet-row strong{color:var(--text);font-weight:600;flex:1;text-align:right;}
+  .copy-btn{
+    background:transparent;border:1px solid var(--accent);color:var(--accent);
+    padding:3px 10px;border-radius:12px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;
+    white-space:nowrap;
+  }
+  .copy-btn:hover{background:var(--accent);color:#1a1510;}
+  .copy-btn.copied{background:var(--ok);border-color:var(--ok);color:#1a1510;}
+  .wallet-note{font-size:11.5px;color:var(--text-3);margin-top:10px;line-height:1.5;font-style:italic;}
+  .wallet-hint{font-size:11px;color:var(--text-3);margin-top:10px;line-height:1.4;}
+  .wallet-steps{margin:10px 0 0 18px;padding:0;}
+  .wallet-steps li{font-size:12px;color:var(--text-2);line-height:1.7;}
 
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
@@ -273,7 +308,7 @@
 
   <div class="admin-brand-edit" id="categoryEdit" style="display:none;">
     <div style="flex:1;min-width:220px;">
-      <span class="field-label">Categories (used across products &amp; filters)</span>
+      <span class="field-label">Categories (used across products &amp; filters) — add as many as you need, no limit</span>
       <div id="categoryChipList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
     <div style="flex:1;min-width:160px;">
@@ -282,6 +317,14 @@
     </div>
     <button class="save-pill" onclick="addCategory()">Add</button>
   </div>
+
+  <div id="addProductBar" style="display:none;margin-top:16px;">
+    <button class="add-product-btn" onclick="addProduct()">+ Add New Product</button>
+  </div>
+
+  <p id="adminSaveNote" style="display:none;color:var(--text-3);font-size:11.5px;max-width:640px;margin-top:12px;line-height:1.5;">
+    Each product card has its own <strong style="color:var(--accent);">Save changes</strong> button — edits only apply once you click it, and take effect on the customer storefront immediately after saving. There's no cap on the number of products or categories you can add.
+  </p>
 </div>
 
 <div class="filters">
@@ -324,6 +367,25 @@
       <label class="pay-option"><input type="radio" name="pm" value="Easypaisa"> Easypaisa</label>
       <label class="pay-option"><input type="radio" name="pm" value="Card"> Debit / credit card</label>
       <label class="pay-option"><input type="radio" name="pm" value="COD"> Cash on delivery</label>
+    </div>
+    <div class="wallet-details" id="walletDetails" style="display:none;">
+      <div class="wallet-card-title" id="walletCardTitle">Easypaisa Transfer Details</div>
+      <div class="wallet-row">
+        <span>Account Title</span>
+        <strong id="walletTitle">AR Store</strong>
+      </div>
+      <div class="wallet-row">
+        <span>Account Number</span>
+        <strong id="walletNumber">0335-1395343</strong>
+        <button class="copy-btn" id="copyWalletNumber" type="button">Copy</button>
+      </div>
+      <div class="wallet-row">
+        <span>Amount to Pay</span>
+        <strong id="walletAmount">Rs 0</strong>
+      </div>
+      <div class="wallet-note" id="walletNote"></div>
+      <ol class="wallet-steps" id="walletSteps"></ol>
+      <div class="wallet-hint">After transferring, please keep your transaction ID / screenshot for confirmation.</div>
     </div>
     <div class="success-note" id="successNote">Order placed. Thank you!</div>
     <div class="modal-actions">
@@ -473,43 +535,47 @@ function render(){
           <button class="add-btn" ${outOfStock?'disabled':''} onclick="addToCart(${p.id})">${outOfStock?'Unavailable':'Add to cart'}</button>
         </div>`;
     } else {
+      const dp = getDisplayProduct(p);
+      const isDirty = !!productDrafts[p.id];
       card.innerHTML = `
         <div class="photo">${photoInner}<span class="cat-tag">${p.category} · ${p.gender}</span></div>
         <div class="card-body">
+          ${isDirty ? '<div class="unsaved-flag">Unsaved changes</div>' : ''}
           <div class="a-field">
             <span class="field-label">Name</span>
-            <input type="text" value="${p.name}" onchange="updateField(${p.id},'name',this.value)">
+            <input type="text" value="${dp.name}" oninput="updateDraftField(${p.id},'name',this.value)">
           </div>
           <div class="a-row">
             <div class="a-field">
               <span class="field-label">Category</span>
-              <select onchange="updateField(${p.id},'category',this.value)">
-                ${categories.map(c=>`<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('')}
+              <select onchange="updateDraftField(${p.id},'category',this.value)">
+                ${categories.map(c=>`<option value="${c}" ${c===dp.category?'selected':''}>${c}</option>`).join('')}
               </select>
             </div>
             <div class="a-field">
               <span class="field-label">For</span>
-              <select onchange="updateField(${p.id},'gender',this.value)">
-                <option value="Men" ${p.gender==='Men'?'selected':''}>Men</option>
-                <option value="Women" ${p.gender==='Women'?'selected':''}>Women</option>
-                <option value="Both" ${p.gender==='Both'?'selected':''}>Both</option>
+              <select onchange="updateDraftField(${p.id},'gender',this.value)">
+                <option value="Men" ${dp.gender==='Men'?'selected':''}>Men</option>
+                <option value="Women" ${dp.gender==='Women'?'selected':''}>Women</option>
+                <option value="Both" ${dp.gender==='Both'?'selected':''}>Both</option>
               </select>
             </div>
           </div>
           <div class="a-row">
             <div class="a-field">
               <span class="field-label">Price (Rs)</span>
-              <input type="number" value="${p.price}" onchange="updateField(${p.id},'price',this.value)">
+              <input type="number" value="${dp.price}" oninput="updateDraftField(${p.id},'price',this.value)">
             </div>
             <div class="a-field">
               <span class="field-label">Quantity</span>
-              <input type="number" value="${p.qty}" onchange="updateField(${p.id},'qty',this.value)">
+              <input type="number" value="${dp.qty}" oninput="updateDraftField(${p.id},'qty',this.value)">
             </div>
           </div>
           <div class="a-field">
             <span class="field-label">Picture URL</span>
-            <input type="url" value="${p.img}" placeholder="https://..." onchange="updateField(${p.id},'img',this.value)">
+            <input type="url" value="${dp.img}" placeholder="https://..." oninput="updateDraftField(${p.id},'img',this.value)">
           </div>
+          <button class="save-pill" style="width:100%;margin-top:2px;" onclick="saveProduct(${p.id})">Save changes</button>
           <button class="del-btn" onclick="deleteProduct(${p.id})">Remove product</button>
         </div>`;
     }
@@ -525,25 +591,50 @@ function render(){
   }
 }
 
-function updateField(id, field, value){
-  const p = products.find(p=>p.id===id);
-  if(field==='price' || field==='qty') p[field] = Math.max(0, Number(value)||0);
-  else p[field] = value;
-  showToast('Saved');
-  if(field!=='img') render();
+/* ---------- admin edit drafts (explicit Save, not auto-save) ---------- */
+let productDrafts = {}; // id -> pending edited copy, until Save is clicked
+
+function getDisplayProduct(p){
+  return productDrafts[p.id] || p;
+}
+
+function updateDraftField(id, field, value){
+  if(!productDrafts[id]){
+    const p = products.find(pp=>pp.id===id);
+    productDrafts[id] = {...p};
+  }
+  if(field==='price' || field==='qty') productDrafts[id][field] = Math.max(0, Number(value)||0);
+  else productDrafts[id][field] = value;
+}
+
+function saveProduct(id){
+  const draft = productDrafts[id];
+  const p = products.find(pp=>pp.id===id);
+  if(draft && p){
+    Object.assign(p, draft);
+  }
+  delete productDrafts[id];
+  showToast('Saved — now visible on the customer storefront');
+  render();
 }
 
 function deleteProduct(id){
   products = products.filter(p=>p.id!==id);
   delete cart[id];
+  delete productDrafts[id];
   render();
 }
 
 function addProduct(){
-  // The grid auto-flows (auto-fill/minmax), so there's no fixed limit —
-  // products just wrap onto new rows as more are added.
+  // The grid auto-flows (auto-fill/minmax), so there's no fixed limit on
+  // products or categories — add as many as you need.
+  // Reset filters so the new product is guaranteed to be visible right away.
+  activeCat = 'All';
+  activeGender = 'All';
   products.push({id:nextId++, name:"New product", category:categories[0], gender:"Men", price:0, qty:0, img:""});
+  renderCategoryFilters();
   render();
+  showToast('New product added below — fill in details and click Save');
 }
 
 function addToCart(id){
@@ -594,6 +685,8 @@ function enterCustomerMode(){
   document.getElementById('btnAdmin').classList.remove('active');
   document.getElementById('brandEdit').style.display='none';
   document.getElementById('categoryEdit').style.display='none';
+  document.getElementById('addProductBar').style.display='none';
+  document.getElementById('adminSaveNote').style.display='none';
   render();
 }
 
@@ -603,6 +696,8 @@ function enterAdminMode(){
   document.getElementById('btnCustomer').classList.remove('active');
   document.getElementById('brandEdit').style.display='flex';
   document.getElementById('categoryEdit').style.display='flex';
+  document.getElementById('addProductBar').style.display='block';
+  document.getElementById('adminSaveNote').style.display='block';
   document.getElementById('adminChip').style.display='flex';
   document.getElementById('modeToggle').style.display='flex';
   renderCategoryChips();
@@ -652,15 +747,7 @@ document.getElementById('adminPasswordInput').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter') attemptAdminLogin();
 });
 
-// filters
-document.querySelectorAll('[data-cat]').forEach(b=>{
-  b.onclick = ()=>{
-    document.querySelectorAll('[data-cat]').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    activeCat = b.dataset.cat;
-    render();
-  };
-});
+// filters (category pills are rendered/handled by renderCategoryFilters)
 document.querySelectorAll('[data-gender]').forEach(b=>{
   b.onclick = ()=>{
     document.querySelectorAll('[data-gender]').forEach(x=>x.classList.remove('active'));
@@ -690,10 +777,76 @@ overlay.onclick = closeDrawerFn;
 
 // payment modal
 const payModal = document.getElementById('payModal');
+
+const WALLET_NUMBER = "0335-1395343"; // Easypaisa account — receives both Easypaisa and JazzCash transfers
+const ACCOUNT_TITLE = "AR Store";
+
+const WALLET_STEPS = {
+  Easypaisa: [
+    "Open your Easypaisa app or dial *786#.",
+    "Go to \u201cSend Money\u201d \u2192 \u201cEasypaisa Account\u201d.",
+    `Enter account number ${WALLET_NUMBER}.`,
+    "Enter the exact order amount shown above and confirm with your PIN.",
+    "Keep the transaction ID for your records."
+  ],
+  JazzCash: [
+    "Open your JazzCash app.",
+    "Go to \u201cSend Money\u201d \u2192 \u201cBank Transfer\u201d \u2192 select \u201cEasypaisa\u201d.",
+    `Enter account number ${WALLET_NUMBER}.`,
+    "Enter the exact order amount shown above and confirm with your MPIN.",
+    "Keep the transaction ID for your records."
+  ]
+};
+
+const WALLET_NOTE = {
+  Easypaisa: "",
+  JazzCash: "Note: this is an Easypaisa account, so JazzCash will process it as an inter-wallet bank transfer. A small service fee may apply from JazzCash's side."
+};
+
+function getCartTotal(){
+  return Object.keys(cart).reduce((sum,id)=>{
+    const p = products.find(p=>p.id==id);
+    return p ? sum + p.price*cart[id] : sum;
+  }, 0);
+}
+
+function updateWalletDetails(){
+  const selected = document.querySelector('input[name="pm"]:checked').value;
+  const box = document.getElementById('walletDetails');
+  if(selected === 'JazzCash' || selected === 'Easypaisa'){
+    document.getElementById('walletCardTitle').textContent = `${selected} Transfer Details`;
+    document.getElementById('walletTitle').textContent = ACCOUNT_TITLE;
+    document.getElementById('walletNumber').textContent = WALLET_NUMBER;
+    document.getElementById('walletAmount').textContent = fmt(getCartTotal());
+    document.getElementById('walletNote').textContent = WALLET_NOTE[selected];
+    document.getElementById('walletNote').style.display = WALLET_NOTE[selected] ? 'block' : 'none';
+    document.getElementById('walletSteps').innerHTML = WALLET_STEPS[selected].map(s=>`<li>${s}</li>`).join('');
+    document.getElementById('copyWalletNumber').textContent = 'Copy';
+    document.getElementById('copyWalletNumber').classList.remove('copied');
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+document.getElementById('copyWalletNumber').onclick = ()=>{
+  const num = document.getElementById('walletNumber').textContent;
+  navigator.clipboard.writeText(num).then(()=>{
+    const btn = document.getElementById('copyWalletNumber');
+    btn.textContent = 'Copied';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 1500);
+  }).catch(()=> showToast('Could not copy — please copy manually'));
+};
+document.querySelectorAll('input[name="pm"]').forEach(r=>{
+  r.addEventListener('change', updateWalletDetails);
+});
+
 document.getElementById('checkoutBtn').onclick = ()=>{
   if(Object.keys(cart).length===0){ showToast('Cart is empty'); return; }
   document.getElementById('successNote').style.display='none';
   payModal.classList.add('open');
+  updateWalletDetails();
 };
 document.getElementById('cancelPay').onclick = ()=> payModal.classList.remove('open');
 document.getElementById('confirmPay').onclick = ()=>{
