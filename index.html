@@ -51,6 +51,20 @@
     background:transparent;border:none;color:var(--text-2);padding:7px 16px;cursor:pointer;font-family:'Inter',sans-serif;
   }
   .mode-toggle button.active{background:var(--accent);color:#1a1510;font-weight:500;}
+  .admin-chip{
+    display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-3);
+  }
+  .admin-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);}
+  .logout-link{
+    background:none;border:none;color:var(--text-3);font-size:12px;cursor:pointer;
+    text-decoration:underline;font-family:'Inter',sans-serif;
+  }
+  .logout-link:hover{color:var(--accent);}
+  .staff-link{
+    background:none;border:none;color:var(--text-3);opacity:0.5;font-size:11px;
+    cursor:pointer;font-family:'Inter',sans-serif;padding:4px;
+  }
+  .staff-link:hover{opacity:1;color:var(--accent);}
   .cart-btn{
     position:relative;background:transparent;border:1px solid var(--border);color:var(--text);
     padding:8px 16px;border-radius:20px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;
@@ -74,11 +88,11 @@
   }
   .admin-brand-edit input{flex:1;min-width:160px;}
   .field-label{font-size:11px;color:var(--text-3);display:block;margin-bottom:5px;letter-spacing:0.3px;}
-  input[type=text], input[type=number], input[type=url]{
+  input[type=text], input[type=number], input[type=url], input[type=password], select{
     background:var(--surface-2);border:1px solid var(--border);color:var(--text);
     padding:8px 10px;border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;width:100%;
   }
-  input:focus{outline:none;border-color:var(--accent);}
+  input:focus, select:focus{outline:none;border-color:var(--accent);}
   .save-pill{
     background:var(--accent);color:#1a1510;border:none;padding:8px 18px;border-radius:6px;
     font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;
@@ -97,6 +111,14 @@
     padding:6px 14px;border-radius:16px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
   }
   .pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+  .cat-chip{
+    display:flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);
+    color:var(--text-2);padding:5px 6px 5px 12px;border-radius:14px;font-size:12px;
+  }
+  .cat-chip button{
+    background:none;border:none;color:var(--text-3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;
+  }
+  .cat-chip button:hover{color:var(--danger);}
 
   /* grid */
   .grid{
@@ -192,6 +214,7 @@
   .cancel-btn{background:transparent;border:1px solid var(--border);color:var(--text-2);}
   .confirm-btn{background:var(--accent);border:none;color:#1a1510;font-weight:600;}
   .success-note{color:var(--ok);font-size:13px;text-align:center;padding:10px 0;display:none;}
+  .error-note{color:var(--danger);font-size:12px;margin-top:-8px;margin-bottom:12px;display:none;}
 
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
@@ -202,7 +225,7 @@
   .toast.show{opacity:1;}
 
   @media(max-width:640px){
-    .topbar{padding:16px 20px;}
+    .topbar{padding:16px 20px;flex-wrap:wrap;gap:10px;}
     .hero{padding:40px 20px 30px;}
     .hero h1{font-size:38px;}
     .filters{padding:0 20px 22px;}
@@ -219,7 +242,11 @@
     <div class="brand-name" id="storeName">AR Store</div>
   </div>
   <div class="top-actions">
-    <div class="mode-toggle">
+    <div class="admin-chip" id="adminChip" style="display:none;">
+      <span class="dot"></span> Admin
+      <button class="logout-link" id="logoutBtn">Log out</button>
+    </div>
+    <div class="mode-toggle" id="modeToggle" style="display:none;">
       <button id="btnCustomer" class="active">Customer</button>
       <button id="btnAdmin">Admin</button>
     </div>
@@ -228,9 +255,9 @@
 </div>
 
 <div class="hero">
-  <div class="tagline">WATCHES &amp; PERFUMES</div>
+  <div class="tagline" id="heroTagline">WATCHES &amp; PERFUMES</div>
   <h1 class="serif" id="heroHeading">Timepieces &amp; scents, chosen with care</h1>
-  <p id="heroSub">Curated watches and perfumes for men and women. Every piece added by hand.</p>
+  <p id="heroSub">Curated pieces for men and women. Every item added by hand.</p>
 
   <div class="admin-brand-edit" id="brandEdit" style="display:none;">
     <div style="flex:1;min-width:160px;">
@@ -243,14 +270,23 @@
     </div>
     <button class="save-pill" onclick="saveBrand()">Save</button>
   </div>
+
+  <div class="admin-brand-edit" id="categoryEdit" style="display:none;">
+    <div style="flex:1;min-width:220px;">
+      <span class="field-label">Categories (used across products &amp; filters)</span>
+      <div id="categoryChipList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+    <div style="flex:1;min-width:160px;">
+      <span class="field-label">Add category</span>
+      <input type="text" id="newCategoryInput" placeholder="e.g. Sunglasses">
+    </div>
+    <button class="save-pill" onclick="addCategory()">Add</button>
+  </div>
 </div>
 
 <div class="filters">
-  <div class="filter-group">
+  <div class="filter-group" id="categoryFilterGroup">
     <span class="lbl">CATEGORY</span>
-    <button class="pill active" data-cat="All">All</button>
-    <button class="pill" data-cat="Watches">Watches</button>
-    <button class="pill" data-cat="Perfumes">Perfumes</button>
   </div>
   <div class="filter-group">
     <span class="lbl">FOR</span>
@@ -261,6 +297,10 @@
 </div>
 
 <div class="grid" id="grid"></div>
+
+<div style="text-align:center;padding:0 40px 40px;">
+  <button class="staff-link" id="staffLoginLink">Staff</button>
+</div>
 
 <div class="overlay" id="overlay"></div>
 <div class="drawer" id="drawer">
@@ -293,9 +333,26 @@
   </div>
 </div>
 
+<div class="modal-wrap" id="adminLoginModal">
+  <div class="modal">
+    <h3>Admin sign in</h3>
+    <p>Enter the admin password to manage products.</p>
+    <div class="a-field" style="margin-bottom:6px;">
+      <span class="field-label">Password</span>
+      <input type="password" id="adminPasswordInput" placeholder="••••••••" autocomplete="off">
+    </div>
+    <div class="error-note" id="adminError">Incorrect password. Try again.</div>
+    <div class="modal-actions">
+      <button class="cancel-btn" id="cancelAdminLogin">Cancel</button>
+      <button class="confirm-btn" id="confirmAdminLogin">Sign in</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+/* ---------- data ---------- */
 let products = [
   {id:1, name:"Aurum Chronograph", category:"Watches", gender:"Men", price:24999, qty:8, img:""},
   {id:2, name:"Lumen Petite", category:"Watches", gender:"Women", price:18999, qty:5, img:""},
@@ -305,10 +362,17 @@ let products = [
   {id:6, name:"Ambergris Nuit", category:"Perfumes", gender:"Women", price:9999, qty:0, img:""},
 ];
 let nextId = 7;
+let categories = ["Watches", "Perfumes", "Bags", "Sunglasses", "Jewelry", "Accessories"];
 let cart = {}; // id -> qty
 let mode = "customer"; // or "admin"
 let activeCat = "All";
 let activeGender = "All";
+
+/* ---------- admin auth ---------- */
+// Prototype-only client-side gate. Change this password before sharing the link,
+// and swap for real server-side auth if this store ever goes live.
+const ADMIN_PASSWORD = "Zehra2024";
+let isAdminAuthed = false;
 
 const grid = document.getElementById('grid');
 const cartCount = document.getElementById('cartCount');
@@ -322,6 +386,66 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 1800);
 }
 
+/* ---------- categories (extensible list, not hardcoded to 2) ---------- */
+function renderCategoryFilters(){
+  const group = document.getElementById('categoryFilterGroup');
+  group.innerHTML = '<span class="lbl">CATEGORY</span>';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'pill' + (activeCat==='All' ? ' active' : '');
+  allBtn.textContent = 'All';
+  allBtn.onclick = ()=>{ activeCat='All'; renderCategoryFilters(); render(); };
+  group.appendChild(allBtn);
+  categories.forEach(cat=>{
+    const btn = document.createElement('button');
+    btn.className = 'pill' + (activeCat===cat ? ' active' : '');
+    btn.textContent = cat;
+    btn.onclick = ()=>{ activeCat=cat; renderCategoryFilters(); render(); };
+    group.appendChild(btn);
+  });
+}
+
+function renderCategoryChips(){
+  const list = document.getElementById('categoryChipList');
+  list.innerHTML = '';
+  categories.forEach(cat=>{
+    const chip = document.createElement('div');
+    chip.className = 'cat-chip';
+    chip.innerHTML = `${cat} <button title="Remove category">&#10005;</button>`;
+    chip.querySelector('button').onclick = ()=> removeCategory(cat);
+    list.appendChild(chip);
+  });
+}
+
+function addCategory(){
+  const input = document.getElementById('newCategoryInput');
+  const val = input.value.trim();
+  if(!val){ return; }
+  if(categories.some(c=>c.toLowerCase()===val.toLowerCase())){
+    showToast('That category already exists');
+    return;
+  }
+  categories.push(val);
+  input.value = '';
+  renderCategoryChips();
+  renderCategoryFilters();
+  render();
+  showToast('Category added');
+}
+
+function removeCategory(cat){
+  if(categories.length <= 1){ showToast("You need at least one category"); return; }
+  const inUse = products.some(p=>p.category===cat);
+  if(inUse && !confirm(`"${cat}" is used by existing products. Remove it and reassign those products to "${categories.find(c=>c!==cat)}"?`)) return;
+  categories = categories.filter(c=>c!==cat);
+  const fallback = categories[0];
+  products.forEach(p=>{ if(p.category===cat) p.category = fallback; });
+  if(activeCat===cat) activeCat = 'All';
+  renderCategoryChips();
+  renderCategoryFilters();
+  render();
+}
+
+/* ---------- render (grid auto-flows, so any number of products fits) ---------- */
 function render(){
   grid.innerHTML = "";
   const filtered = products.filter(p=>{
@@ -358,6 +482,22 @@ function render(){
           </div>
           <div class="a-row">
             <div class="a-field">
+              <span class="field-label">Category</span>
+              <select onchange="updateField(${p.id},'category',this.value)">
+                ${categories.map(c=>`<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('')}
+              </select>
+            </div>
+            <div class="a-field">
+              <span class="field-label">For</span>
+              <select onchange="updateField(${p.id},'gender',this.value)">
+                <option value="Men" ${p.gender==='Men'?'selected':''}>Men</option>
+                <option value="Women" ${p.gender==='Women'?'selected':''}>Women</option>
+                <option value="Both" ${p.gender==='Both'?'selected':''}>Both</option>
+              </select>
+            </div>
+          </div>
+          <div class="a-row">
+            <div class="a-field">
               <span class="field-label">Price (Rs)</span>
               <input type="number" value="${p.price}" onchange="updateField(${p.id},'price',this.value)">
             </div>
@@ -376,7 +516,7 @@ function render(){
     grid.appendChild(card);
   });
 
-  if(mode === "admin"){
+  if(mode === "admin" && isAdminAuthed){
     const addCard = document.createElement('div');
     addCard.className = 'add-product-card';
     addCard.textContent = '+ Add new product';
@@ -400,7 +540,9 @@ function deleteProduct(id){
 }
 
 function addProduct(){
-  products.push({id:nextId++, name:"New product", category:"Watches", gender:"Men", price:0, qty:0, img:""});
+  // The grid auto-flows (auto-fill/minmax), so there's no fixed limit —
+  // products just wrap onto new rows as more are added.
+  products.push({id:nextId++, name:"New product", category:categories[0], gender:"Men", price:0, qty:0, img:""});
   render();
 }
 
@@ -445,21 +587,70 @@ function removeFromCart(id){
   updateCartUI();
 }
 
-// mode toggle
-document.getElementById('btnCustomer').onclick = ()=>{
+/* ---------- mode toggle + admin gate ---------- */
+function enterCustomerMode(){
   mode='customer';
   document.getElementById('btnCustomer').classList.add('active');
   document.getElementById('btnAdmin').classList.remove('active');
   document.getElementById('brandEdit').style.display='none';
+  document.getElementById('categoryEdit').style.display='none';
   render();
-};
-document.getElementById('btnAdmin').onclick = ()=>{
+}
+
+function enterAdminMode(){
   mode='admin';
   document.getElementById('btnAdmin').classList.add('active');
   document.getElementById('btnCustomer').classList.remove('active');
   document.getElementById('brandEdit').style.display='flex';
+  document.getElementById('categoryEdit').style.display='flex';
+  document.getElementById('adminChip').style.display='flex';
+  document.getElementById('modeToggle').style.display='flex';
+  renderCategoryChips();
   render();
+}
+
+document.getElementById('btnCustomer').onclick = enterCustomerMode;
+document.getElementById('btnAdmin').onclick = enterAdminMode;
+
+// Discreet staff-only entry point — not shown as an "Admin" tab to customers.
+document.getElementById('staffLoginLink').onclick = ()=>{
+  if(isAdminAuthed){
+    enterAdminMode();
+  } else {
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminError').style.display = 'none';
+    document.getElementById('adminLoginModal').classList.add('open');
+    setTimeout(()=>document.getElementById('adminPasswordInput').focus(), 50);
+  }
 };
+
+document.getElementById('logoutBtn').onclick = ()=>{
+  isAdminAuthed = false;
+  document.getElementById('adminChip').style.display='none';
+  document.getElementById('modeToggle').style.display='none';
+  enterCustomerMode();
+  showToast('Logged out of admin');
+};
+
+function attemptAdminLogin(){
+  const val = document.getElementById('adminPasswordInput').value;
+  if(val === ADMIN_PASSWORD){
+    isAdminAuthed = true;
+    document.getElementById('adminLoginModal').classList.remove('open');
+    enterAdminMode();
+    showToast('Admin access granted');
+  } else {
+    document.getElementById('adminError').style.display = 'block';
+  }
+}
+
+document.getElementById('confirmAdminLogin').onclick = attemptAdminLogin;
+document.getElementById('cancelAdminLogin').onclick = ()=>{
+  document.getElementById('adminLoginModal').classList.remove('open');
+};
+document.getElementById('adminPasswordInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') attemptAdminLogin();
+});
 
 // filters
 document.querySelectorAll('[data-cat]').forEach(b=>{
@@ -520,6 +711,7 @@ document.getElementById('confirmPay').onclick = ()=>{
   }, 1200);
 };
 
+renderCategoryFilters();
 render();
 updateCartUI();
 </script>
